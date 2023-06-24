@@ -71,7 +71,7 @@ class LineLengthConstraint {
     return Math.abs(currentLength - this.length) <= threshold;
   }
 
-  // 制約が満たされない場合に、その制約が満たされるように point2 の位置を修正する
+  // 制約が満たされない場合に、その制約が満たされるように point1, point2 の位置を修正する
   correct() {
     //point1 と point2 の間の x 座標と y 座標の差（つまり、ベクトルの成分）を計算
     const dx = this.point1.x - this.point2.x;
