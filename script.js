@@ -38,6 +38,7 @@ class FixedPointConstraint {
   }
 
   check() {
+    // 完全一致で評価
     return this.point.x === this.x && this.point.y === this.y;
   }
 
@@ -56,9 +57,18 @@ class LineLengthConstraint {
   }
 
   check() {
+    // 完全一致で評価
+    // const dx = this.point1.x - this.point2.x;
+    // const dy = this.point1.y - this.point2.y;
+    // return Math.hypot(dx, dy) === this.length;
+
+    const threshold = 0.001; // 許容誤差の閾値を設定します
+
+    // 二点間の距離が閾値以内の誤差で目標の長さに一致しているかチェックします
     const dx = this.point1.x - this.point2.x;
     const dy = this.point1.y - this.point2.y;
-    return Math.hypot(dx, dy) === this.length;
+    const currentLength = Math.hypot(dx, dy);
+    return Math.abs(currentLength - this.length) <= threshold;
   }
 
   // 制約が満たされない場合に、その制約が満たされるように point2 の位置を修正する
@@ -76,7 +86,7 @@ class LineLengthConstraint {
     // Use a simple gradient descent approach to correct the position
     // 単純な勾配降下法を用いた調整のための因子。調整の「強さ」を制御する。
     // 値が大きければ大きいほど、一度の調整で point2 が大きく動きます。
-    const correctionFactor = 0.00000000000001;
+    const correctionFactor = 0.001;
     
     // Calculate correction for x and y separately
     // X軸方向とY軸方向の補正量をそれぞれ計算。
@@ -141,15 +151,20 @@ function onDrag(dx, dy) {
 
   // Correct position until constraints are satisfied
   let count = 0;
-  while (!constraints.every(constraint => constraint.check()) && count < 1000) {
+  while (!constraints.every(constraint => constraint.check()) && count < 10000) {
     constraints.forEach(constraint => constraint.correct());
     count++;
   }
 
   // Redraw and log final lengths
   draw();
-  //const finalLengths = constraints.map(constraint => Math.hypot(constraint.point1.x - constraint.point2.x, constraint.point1.y - constraint.point2.y));
-  //console.log("Final lengths: ", finalLengths);
+  const finalLengths = [
+    Math.hypot(a.x - b.x, a.y - b.y), // final length of line segment ab
+    Math.hypot(c.x - d.x, c.y - d.y), // final length of line segment cd
+    Math.hypot(b.x - c.x, b.y - c.y), // final length of line segment bc
+  ];
+
+  console.log("Final lengths: ", finalLengths);
 
   // Log the position of each point
   console.log(`a: (${a.x}, ${a.y})`);
