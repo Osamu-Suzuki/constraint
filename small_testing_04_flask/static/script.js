@@ -14,13 +14,15 @@ fetch('/optimize', {
     body: JSON.stringify(data)
 })
 .then(response => response.json())
-.then(data => {
+.then(r_data => {
     // 最適化後の新しい座標を取得
-    let newCoordinates = data;
+    let newCoordinates = r_data;
 
     // 新しい座標をcanvasに描画
     let canvas = document.getElementById('myCanvas');
     let ctx = canvas.getContext('2d');
+
+    console.log(data);
 
     // 初期座標描画
     ctx.beginPath();
