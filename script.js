@@ -29,8 +29,26 @@ class Point {
   }
 }
 
-// Constraint class
-class Constraint {
+// FixedPointConstraint class
+class FixedPointConstraint {
+  constructor(point) {
+    this.point = point;
+    this.x = point.x;
+    this.y = point.y;
+  }
+
+  check() {
+    return this.point.x === this.x && this.point.y === this.y;
+  }
+
+  correct() {
+    this.point.x = this.x;
+    this.point.y = this.y;
+  }
+}
+
+// LineLengthConstraint class
+class LineLengthConstraint {
   constructor(point1, point2, length) {
     this.point1 = point1;
     this.point2 = point2;
@@ -58,7 +76,7 @@ class Constraint {
     // Use a simple gradient descent approach to correct the position
     // 単純な勾配降下法を用いた調整のための因子。調整の「強さ」を制御する。
     // 値が大きければ大きいほど、一度の調整で point2 が大きく動きます。
-    const correctionFactor = 0.000000001;
+    const correctionFactor = 0.00000000000001;
     
     // Calculate correction for x and y separately
     // X軸方向とY軸方向の補正量をそれぞれ計算。
@@ -67,8 +85,13 @@ class Constraint {
     const correctionX = dx * correctionFactor * diff / currentLength;
     const correctionY = dy * correctionFactor * diff / currentLength;
     
+    // point1 と point2 の位置を等しく修正するために、補正量を半分にする
+    const halfCorrectionX = correctionX / 2;
+    const halfCorrectionY = correctionY / 2;
+    
     // point2 の位置を修正するため
-    this.point2.move(correctionX, correctionY);    
+    this.point1.move(-halfCorrectionX, -halfCorrectionY);
+    this.point2.move(halfCorrectionX, halfCorrectionY);
   }
 }
 
@@ -78,16 +101,19 @@ const b = new Point(200, 300, "b");
 const c = new Point(500, 400, "c");
 const d = new Point(500, 100, "d");
 
-// Create constraints
 const initialLengths = [
   Math.hypot(a.x - b.x, a.y - b.y), // Initial length of line segment ab
   Math.hypot(c.x - d.x, c.y - d.y), // Initial length of line segment cd
   Math.hypot(b.x - c.x, b.y - c.y), // Initial length of line segment bc
 ];
+
+// Create constraints
 const constraints = [
-  new Constraint(a, b, initialLengths[0]), // Constraint for line segment ab
-  new Constraint(c, d, initialLengths[1]), // Constraint for line segment cd
-  new Constraint(b, c, initialLengths[2]), // Constraint for line segment bc
+  new FixedPointConstraint(a),
+  new FixedPointConstraint(b),
+  new LineLengthConstraint(a, b, Math.hypot(a.x - b.x, a.y - b.y)), // Constraint for line segment ab
+  new LineLengthConstraint(c, d, Math.hypot(c.x - d.x, c.y - d.y)), // Constraint for line segment cd
+  new LineLengthConstraint(b, c, Math.hypot(b.x - c.x, b.y - c.y)), // Constraint for line segment bc
 ];
 
 // Draw initial state
@@ -122,8 +148,8 @@ function onDrag(dx, dy) {
 
   // Redraw and log final lengths
   draw();
-  const finalLengths = constraints.map(constraint => Math.hypot(constraint.point1.x - constraint.point2.x, constraint.point1.y - constraint.point2.y));
-  console.log("Final lengths: ", finalLengths);
+  //const finalLengths = constraints.map(constraint => Math.hypot(constraint.point1.x - constraint.point2.x, constraint.point1.y - constraint.point2.y));
+  //console.log("Final lengths: ", finalLengths);
 
   // Log the position of each point
   console.log(`a: (${a.x}, ${a.y})`);
