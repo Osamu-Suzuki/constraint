@@ -49,25 +49,57 @@ class FixedPointConstraint(Constraint):
         p = points[self.point]
         return (p.x - self.x) ** 2 + (p.y - self.y) ** 2
 
-class FixedAngleConstraint(Constraint):
-    def __init__(self, point1, point2, point3, angle):
-        self.point1 = point1
-        self.point2 = point2
-        self.point3 = point3
-        self.angle = angle
-
-    def evaluate(self, points):
-        # Calculate the angle between point1-point2 and point3-point2
-        # and return the difference from the desired angle
-        # ...
-        pass
-
-
-
 
 ###########################################
 
-def run_optimization(constraints, initial_points):  #data):
+def objective_function(point_array, target_x, target_y):
+    x, y = point_array
+    # 点と目標点との距離の二乗を計算
+    distance_squared = (x - target_x) ** 2 + (y - target_y) ** 2
+    return distance_squared
+
+
+def constraint_function(points_array, constraint):
+    points = {'p': Point(points_array[0], points_array[1])}
+    return constraint.evaluate(points)
+
+###########################################
+
+def run_optimization(constraints, initial_point, target_x, target_y):  #data):
+    # 空のリストを作成して、scipyの制約条件を格納します。
+    scipy_constraints = []
+
+    # constraintsリスト内の各制約オブジェクトに対してループを実行します。
+    for constraint in constraints:
+        # scipyの制約条件の辞書を作成します。
+        scipy_constraint = {
+            'type': 'eq',               # 等式制約を指定します。
+            'fun': constraint_function, # 制約関数を指定します。
+            'args': (constraint,)       # 制約関数に渡す追加の引数を指定します。
+        }
+        
+        # 作成した辞書をリストに追加します。
+        scipy_constraints.append(scipy_constraint)
+
+
+    # 目的関数に渡す追加の引数
+    additional_args = (target_x, target_y)
+
+    # 最適化を実行
+    result = minimize(
+        fun = objective_function,        # 最小化する目的関数
+        x0 = initial_point,              # 最適化の初期推定値
+        args = additional_args,          # 目的関数に渡す追加の引数
+        constraints = scipy_constraints  # 最適化に適用する制約条件
+    )
+
+
+    # The optimized point is in result.x
+    optimized_point = result.x
+
+
+    return optimized_point
+
 
     #a = Point(data['a']['x'], data['a']['y'])
     #b = Point(data['b']['x'], data['b']['y'])
@@ -79,16 +111,6 @@ def run_optimization(constraints, initial_points):  #data):
     #bc = Line(b, c)
     #cd = Line(c, d)
     #da = Line(d, a)
-    
-    
-    def objective_function(point_array, target_x, target_y):
-        x, y = point_array
-        
-        # 点と目標点との距離の二乗を計算
-        distance_squared = (x - target_x) ** 2 + (y - target_y) ** 2
-        
-        return distance_squared
-
 
     # def objective(z):
     #    return ((c.x+dx)-z[2]) ** 2 + ((c.y+dy)-z[3]) ** 2
@@ -102,38 +124,40 @@ def run_optimization(constraints, initial_points):  #data):
     #def constraint3(z):
     #    return np.sqrt((z[2] - d.x) ** 2 + (z[3] - d.y) ** 2) - cd.length
 
-    cons = [{'type': 'eq', 'fun': constraint1},
-            {'type': 'eq', 'fun': constraint2},
-            {'type': 'eq', 'fun': constraint3}]
+    #cons = [{'type': 'eq', 'fun': constraint1},
+    #        {'type': 'eq', 'fun': constraint2},
+    #        {'type': 'eq', 'fun': constraint3}]
 
-    x0 = np.array([b.x, b.y, c.x, c.y])
+    #x0 = np.array([b.x, b.y, c.x, c.y])
 
-    sol = minimize(objective, x0, constraints=cons, method='SLSQP')
+    #sol = minimize(objective, x0, constraints=cons, method='SLSQP')
 
-    result = {
-        'b': {'x': sol.x[0], 'y': sol.x[1]},
-        'c': {'x': sol.x[2], 'y': sol.x[3]}
-    }
+    #result = {
+    #    'b': {'x': sol.x[0], 'y': sol.x[1]},
+    #    'c': {'x': sol.x[2], 'y': sol.x[3]}
+    #}
 
-    return result
+    #return result
 
 
 ###########################################
 
-# 初期点の設定
-initial_points = {
-    'a': Point(0, 0),
-    'b': Point(1, 0),
-    'c': Point(1, 1)
-}
-
-# 拘束条件のリストを作成
+# Example usage:
 constraints = [
-    FixedDistanceConstraint('a', 'b', 1),
-    FixedPointConstraint('a', 0, 0),
-    FixedAngleConstraint('a', 'b', 'c', 90)
+    FixedDistanceConstraint('p', 'p', 3),
+    FixedPointConstraint('p', 2, 2)
 ]
+initial_point = np.array([0.5, 0.5])  # Initial point (x=0.5, y=0.5)
+target_x = 5
+target_y = 5
 
-# 最適化を実行
-result = run_optimization(constraints, initial_points)
+# Run the optimization
+optimized_point = run_optimization(constraints, initial_point, target_x, target_y)
 
+# Output the result
+print(f"Optimized point: x={optimized_point[0]}, y={optimized_point[1]}")
+
+
+###########################################
+
+input("Waiting for key press...")
