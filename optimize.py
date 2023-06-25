@@ -58,9 +58,8 @@ def objective_function(point_array, target_x, target_y):
     distance_squared = (x - target_x) ** 2 + (y - target_y) ** 2
     return distance_squared
 
-
 def constraint_function(points_array, constraint):
-    points = {'p': Point(points_array[0], points_array[1])}
+    points = {f'p{i}': Point(points_array[2*i], points_array[2*i + 1]) for i in range(len(points_array) // 2)}
     return constraint.evaluate(points)
 
 ###########################################
@@ -92,7 +91,8 @@ def run_optimization(constraints, initial_point, target_x, target_y):  #data):
         args = additional_args,          # 目的関数に渡す追加の引数
         constraints = scipy_constraints  # 最適化に適用する制約条件
     )
-
+    
+    print(result)
 
     # The optimized point is in result.x
     optimized_point = result.x
@@ -144,9 +144,10 @@ def run_optimization(constraints, initial_point, target_x, target_y):  #data):
 
 # Example usage:
 constraints = [
-    FixedDistanceConstraint('p', 'p', 3),
-    FixedPointConstraint('p', 2, 2)
+    FixedDistanceConstraint('p0', 'p1', 3),
+    FixedPointConstraint('p1', 2, 2)
 ]
+
 initial_point = np.array([0.5, 0.5])  # Initial point (x=0.5, y=0.5)
 target_x = 5
 target_y = 5
@@ -155,6 +156,8 @@ target_y = 5
 optimized_point = run_optimization(constraints, initial_point, target_x, target_y)
 
 # Output the result
+
+print("\n")
 print(f"Optimized point: x={optimized_point[0]}, y={optimized_point[1]}")
 
 
