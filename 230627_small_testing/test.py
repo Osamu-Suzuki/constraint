@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 from copy import deepcopy
+import matplotlib.pyplot as plt
 
 ####################################################################################
 
@@ -89,10 +90,34 @@ def move_point(target_point, target_position, constraints):
     res = minimize(target_distance, initial_points_flat, constraints=constraints_for_optimization, method='SLSQP')
     print(res)
 
+    # 初期座標を抽出
+    initial_x_values = [point.x for point in points]
+    initial_y_values = [point.y for point in points]
+
+    # 初期座標をプロット
+    plt.figure()
+    plt.scatter(initial_x_values, initial_y_values)
+    plt.plot(initial_x_values, initial_y_values, linestyle='dashed', label='Initial Position')
+
     updated_points_flat = res.x
     updated_points = []
     for i in range(0, len(updated_points_flat), 2):
         updated_points.append(Point(updated_points_flat[i], updated_points_flat[i+1]))
+    
+    
+    # 結果の座標を抽出
+    x_values = [point.x for point in updated_points]
+    y_values = [point.y for point in updated_points]
+
+    # 結果をプロット
+    plt.scatter(x_values, y_values)
+    plt.plot(x_values, y_values)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Point Movement')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
     return updated_points
 
@@ -129,15 +154,16 @@ new_points = move_point(c, target_position, constraints)
 for point in new_points:
     print(point)
 
+print("n")
 
 # 例2
-# a = Point(2, 2)
-#b = Point(5, 3)
-#points = [a, b]
-#ab = Line(a, b)
-#constraints = [FixedPointConstraint(0), FixedLengthConstraint(0, 1, ab.length)]
-#target_position = Point(5, 6)
+a = Point(2, 2)
+b = Point(5, 3)
+points = [a, b]
+ab = Line(a, b)
+constraints = [FixedPointConstraint(0), FixedLengthConstraint(0, 1, ab.length)]
+target_position = Point(5, 6)
 
-#new_points = move_point(b, target_position, constraints)
-#for point in new_points:
-#    print(point)
+new_points = move_point(b, target_position, constraints)
+for point in new_points:
+    print(point)
