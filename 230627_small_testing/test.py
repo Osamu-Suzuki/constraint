@@ -28,159 +28,116 @@ class Line:
 
 ####################################################################################
 
-
 # FixedPointConstraintクラスは、ある点が固定されていることを表現します。
+# ポイントのインデックスを引数として取り、そのポイントの位置を最適化変数から取得する
 class FixedPointConstraint:
-    def __init__(self, point_id):
-        self.point_id = point_id
+    def __init__(self, point_idx):
+        self.point_idx = point_idx
+        self.initial_point = points[point_idx]
 
     # 初期位置からの変位を計算します。制約としてはこの変位が0であるべきです。
     def __call__(self, points_flat):
-        points = flat_to_array(points_flat)
-        point = points[self.point_id]
-
-        # 現在の点の座標を取得
-        current_position = np.array([point.x, point.y])
-
-        # 初期状態の点の座標を取得
-        initial_position = np.array([initial_points[self.point_id].x, initial_points[self.point_id].y])
-
-        # 現在の座標と初期座標との差分ベクトルを計算
-        diff_vector = current_position - initial_position
-
-        # ベクトルの長さ（ノルム）を計算して返す（つまり、点の初期位置からの移動距離）
+        current_point = Point(*points_flat[self.point_idx * 2: self.point_idx * 2 + 2])
+        diff_vector =  np.array([self.initial_point.x, self.initial_point.y]) - np.array([current_point.x,current_point.y])
         return np.linalg.norm(diff_vector)
 
 
-## 以下、line_nameではなく、point_idを使うやり方に変更が必要
 # FixedLengthConstraintクラスは、ある線の長さが固定されていることを表現します。
+# ポイントのインデックスと初期の長さを引数として取り、そのラインの現在の長さを最適化変数から計算する
 class FixedLengthConstraint:
-    def __init__(self, line_name):
-        self.line_name = line_name
-    
+    def __init__(self, point1_idx, point2_idx, initial_length):
+        self.point1_idx = point1_idx
+        self.point2_idx = point2_idx
+        self.initial_length = initial_length
+
     # 線の現在の長さと初期の長さとの差を計算します。制約としてはこの差が0であるべきです。
     def __call__(self, points_flat):
-        points = flat_to_dict(points_flat)
-        line = lines[self.line_name]
-
-        # 現在の線の長さを計算
-        current_length = np.linalg.norm(np.array([line.point1.x, line.point1.y]) - np.array([line.point2.x, line.point2.y]))
-
-        # 初期状態の線の長さを取得
-        initial_length = initial_lines[self.line_name].length
-
-        # 現在の長さと初期の長さの差を計算して返す
-        length_diff = current_length - initial_length
-        return length_diff
+        point1 = Point(*points_flat[self.point1_idx * 2: self.point1_idx * 2 + 2])
+        point2 = Point(*points_flat[self.point2_idx * 2: self.point2_idx * 2 + 2])
+        current_length = Line(point1, point2).length
+        return current_length - self.initial_length
 
 
 ####################################################################################
 
-
 # 目標点までの距離を計算する関数を生成します。これが最小化の対象となります。
-def target_point_distance(target_point_name):
-    # 生成された関数
+def target_point_distance(target_point_index, target_position):
     def distance(points_flat):
-        points = flat_to_dict(points_flat)
-        print(points)
-
-        # 移動させたい点の現在の位置を取得
-        moving_point = np.array([points[target_point_name].x, points[target_point_name].y])
-        print('moving_point:' + str(moving_point))
-
-        # 移動させたい目標点の位置
-        target_point_position = np.array([target_point.x, target_point.y])
-        print('target_point_position:' + str(target_point_position) + "\n")
-
-        # 移動させたい点と目標点との差分ベクトルを計算
-        diff_vector = moving_point - target_point_position
-
-        # 差分ベクトルのノルム（長さ）を計算して返す。これが2点間の距離になる。
+        moving_point_position = points_flat[target_point_index * 2: target_point_index * 2 + 2]
+        diff_vector = moving_point_position - np.array([target_position.x, target_position.y])
         return np.linalg.norm(diff_vector)
-
-    # 生成した関数を返す
     return distance
 
 
 ####################################################################################
 
-
-
 # 目標点への移動を試みる関数です。
-def move_point(target_point_name, target_point, constraints):
-    # 点の座標を1次元の配列に平坦化します。
-    initial_points_flat = np.array([coord for point in points.values() for coord in [point.x, point.y]])
+def move_point(target_point, target_position, constraints):
+    initial_points_flat = []
+    for point in points:
+        initial_points_flat.extend([point.x, point.y])
+    initial_points_flat = np.array(initial_points_flat)
 
-    # 目標点までの距離を計算する関数を取得します。
-    target_distance = target_point_distance(target_point_name)
+    target_point_index = points.index(target_point)
+    target_distance = target_point_distance(target_point_index, target_position)
 
-    # 初めに、制約条件を準備します。各制約条件を 'type' と 'fun' の辞書で表現します。
-    # ここでは、全ての制約が等式 ('eq') であると仮定しています。
     constraints_for_optimization = []
     for c in constraints:
         constraint_dict = {'type': 'eq', 'fun': c}
         constraints_for_optimization.append(constraint_dict)
 
-    # scipyのminimize関数を呼び出します。目標関数、初期値、制約条件を引数として渡します。
-    # minimize関数は、目標関数を最小化するようなパラメータを探索します。
-    # この探索は、初期値から始まり、制約条件を満たす範囲で行われます。
-    res = minimize(target_distance, initial_points_flat, constraints=constraints_for_optimization)
+    res = minimize(target_distance, initial_points_flat, constraints=constraints_for_optimization, method='SLSQP')
     print(res)
 
-    # 最適化後の座標を取得し、それを点に適用します。
     updated_points_flat = res.x
-    for i, name in enumerate(points):
-        points[name].x, points[name].y = updated_points_flat[2*i:2*i+2]
+    updated_points = []
+    for i in range(0, len(updated_points_flat), 2):
+        updated_points.append(Point(updated_points_flat[i], updated_points_flat[i+1]))
 
-    return points
-
-
-def flat_to_dict(points_flat):
-    return {name: Point(points_flat[i], points_flat[i+1]) for i, name in enumerate(points_names)}
-
+    return updated_points
 
 ####################################################################################
 
-
 # 例1
 # 初期座標と目標座標を設定します。
-
 a = Point(200, 100)
-b = ...
-
-points = [Point(200, 100), Point(200, 300), Point(500, 400), Point(500, 100)]
-initial_points = deepcopy(points)  # 初期座標を保持しておきます。
+b = Point(200, 300)
+c = Point(500, 400)
+d = Point(500, 100)
+points =[a,b,c,d]
 
 ab = Line(a, b)
 bc = Line(b, c)
-...
+cd = Line(c, d)
+lines = [ab,bc,cd]
 
-lines = [Line(points[0], points[1]), Line(points[1], points[2]), Line(points[2], points[3])]
-initial_lines = deepcopy(lines)  # 初期状態の線を保持する辞書を作成
+# 固定ポイントと固定長さの制約を定義します。ポイントのインデックスとラインの初期長さを使用します。
+constraints = [
+    FixedPointConstraint(0),
+    FixedPointConstraint(3),
+    FixedLengthConstraint(0, 1, ab.length),
+    FixedLengthConstraint(1, 2, bc.length),
+    FixedLengthConstraint(2, 3, cd.length)]
 
-constraints = [FixedPointConstraint('a'), FixedPointConstraint('d'), FixedLengthConstraint('ab'), FixedLengthConstraint('bc'), FixedLengthConstraint('cd')]
-target_point = Point(600, 300)
+# 目標点
+target_position = Point(600, 300)
 
 # 点cを目標点に移動させます。
-new_points = move_point('c', target_point, constraints)
+new_points = move_point(c, target_position, constraints)
 
 # 新しい座標を表示します。
-for name, point in new_points.items():
-    print(name, point.x, point.y)
+for point in new_points:
+    print(point)
 
 
 # 例2
-# 初期座標と目標座標を設定します。
-# points_names = ['a', 'b']
-# points = {'a': Point(2, 2), 'b': Point(5, 3)}
-# initial_points = points.copy()  # 初期座標を保持しておきます。
-# lines = {'ab': Line(points['a'], points['b'])}
-# constraints = [FixedPointConstraint('a'), FixedLengthConstraint('ab')]
-# target_point = Point(5, 6)
+# a = Point(2, 2)
+#b = Point(5, 3)
+#points = [a, b]
+#ab = Line(a, b)
+#constraints = [FixedPointConstraint(0), FixedLengthConstraint(0, 1, ab.length)]
+#target_position = Point(5, 6)
 
-# 点bを目標点に移動させます。
-# new_points = move_point('b', target_point, constraints)
-
-# 新しい座標を表示します。
-# for name, point in new_points.items():
-#     print(name, point.x, point.y)
+#new_points = move_point(b, target_position, constraints)
+#for point in new_points:
+#    print(point)
