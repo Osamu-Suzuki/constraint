@@ -154,6 +154,10 @@ new_points = move_point(c, target_position, constraints)
 for point in new_points:
     print(point)
 
+
+####################################################################################
+
+
 print("n")
 
 # 例2
